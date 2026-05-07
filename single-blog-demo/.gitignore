@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# SQLite 数据库运行时生成，不提交到 Git。
+data/*.sqlite3
+data/*.db
+
+# 用户上传图片通常不提交到 Git，只保留 uploads/.gitkeep。
+uploads/*
+!uploads/.gitkeep
+
+.DS_Store

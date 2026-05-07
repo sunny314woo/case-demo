@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>后台文章管理</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">单人博客 Demo</a>
+    <nav>
+      <a href="/">查看前台</a>
+      <a href="/logout">退出登录</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="toolbar">
+      <h1>后台文章管理</h1>
+      <a class="button" href="/admin/articles/new">新增文章</a>
+    </div>
+
+    {% if articles %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>标题</th>
+            <th>分类</th>
+            <th>状态</th>
+            <th>发布时间</th>
+            <th>更新时间</th>
+            <th>阅读量</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for article in articles %}
+            <tr>
+              <td>{{ article.id }}</td>
+              <td>
+                {% if article.status == "published" %}
+                  <a href="/articles/{{ article.id }}">{{ article.title }}</a>
+                {% else %}
+                  {{ article.title }}
+                {% endif %}
+              </td>
+              <td>{{ article.category_name or "-" }}</td>
+              <td><span class="status {{ article.status }}">{{ article.status }}</span></td>
+              <td>{{ article.published_at or "-" }}</td>
+              <td>{{ article.updated_at }}</td>
+              <td>{{ article.view_count }}</td>
+              <td class="actions">
+                <a href="/admin/articles/{{ article.id }}/edit">编辑</a>
+                <form method="post" action="/admin/articles/{{ article.id }}/delete" onsubmit="return confirm('确定删除这篇文章吗？')">
+                  <button class="link-button" type="submit">删除</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="pagination">
+        {% if page > 1 %}
+          <a href="/admin/articles?page={{ page - 1 }}">上一页</a>
+        {% endif %}
+        <span class="hint">第 {{ page }} / {{ total_pages }} 页</span>
+        {% if page < total_pages %}
+          <a href="/admin/articles?page={{ page + 1 }}">下一页</a>
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="empty">暂无文章，点击“新增文章”发布第一篇。</p>
+    {% endif %}
+  </main>
+</body>
+</html>

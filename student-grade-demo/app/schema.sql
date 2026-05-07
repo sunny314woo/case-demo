@@ -1,0 +1,10 @@
+-- 学生成绩表
+CREATE TABLE IF NOT EXISTS students (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_no TEXT NOT NULL,
+    name TEXT NOT NULL,
+    chinese REAL NOT NULL,
+    math REAL NOT NULL,
+    english REAL NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

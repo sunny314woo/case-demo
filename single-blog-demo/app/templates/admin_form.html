@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if mode == "new" %}新增文章{% else %}编辑文章{% endif %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">单人博客 Demo</a>
+    <nav>
+      <a href="/admin/articles">文章管理</a>
+      <a href="/logout">退出登录</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <h1>{% if mode == "new" %}新增文章{% else %}编辑文章{% endif %}</h1>
+
+    <form class="form" method="post" id="article-form" data-mode="{{ mode }}">
+      <input type="hidden" id="article-id-input" value="{{ article.id if article else 0 }}">
+      <label>
+        标题
+        <input
+          type="text"
+          name="title"
+          value="{% if article %}{{ article.title }}{% endif %}"
+          required
+        >
+      </label>
+
+      <label>
+        摘要
+        <textarea name="summary" rows="3">{% if article %}{{ article.summary }}{% endif %}</textarea>
+      </label>
+
+      <label>
+        分类
+        <input
+          type="text"
+          name="category_name"
+          list="category-options"
+          value="{% if article and article.category_name %}{{ article.category_name }}{% endif %}"
+          placeholder="例如：技术分享"
+        >
+      </label>
+      <datalist id="category-options">
+        {% for item in categories %}
+          <option value="{{ item.name }}"></option>
+        {% endfor %}
+      </datalist>
+
+      <label>
+        标签（用英文逗号分隔）
+        <input type="text" name="tags" value="{{ tag_text }}" placeholder="fastapi, sqlite, 教程">
+      </label>
+
+      <label>
+        封面图 URL（用于 SEO/Open Graph）
+        <input
+          type="url"
+          name="cover_image"
+          value="{% if article %}{{ article.cover_image }}{% endif %}"
+          placeholder="https://example.com/cover.jpg"
+        >
+      </label>
+
+      <label>
+        SEO 标题（可选）
+        <input
+          type="text"
+          name="seo_title"
+          value="{% if article %}{{ article.seo_title }}{% endif %}"
+          placeholder="留空时使用文章标题"
+        >
+      </label>
+
+      <label>
+        SEO 描述（可选）
+        <textarea name="seo_description" rows="3" placeholder="留空时使用摘要">{{ article.seo_description if article else "" }}</textarea>
+      </label>
+
+      <label>
+        状态
+        <select name="status">
+          {% set current_status = article.status if article else "draft" %}
+          <option value="draft" {% if current_status == "draft" %}selected{% endif %}>草稿</option>
+          <option value="published" {% if current_status == "published" %}selected{% endif %}>已发布</option>
+          <option value="scheduled" {% if current_status == "scheduled" %}selected{% endif %}>定时发布</option>
+        </select>
+      </label>
+
+      <label>
+        发布时间（定时发布或覆盖发布时间）
+        <input
+          type="datetime-local"
+          name="published_at"
+          value="{% if article and article.published_at %}{{ article.published_at[:16] | replace(' ', 'T') }}{% endif %}"
+        >
+      </label>
+
+      <label>
+        正文
+      </label>
+
+      <!-- Quill 会接管这个 div，把它变成富文本编辑器。 -->
+      <div id="editor">{% if article %}{{ article.content | safe }}{% endif %}</div>
+      <p class="hint">当前字数：<span id="word-count">0</span></p>
+
+      <!-- 真正提交给后端的是这个隐藏字段，editor.js 会把 Quill HTML 写进去。 -->
+      <input type="hidden" name="content" id="content-input">
+      <p class="hint" id="autosave-status">自动保存未启动</p>
+
+      <div class="form-actions">
+        <button type="button" class="button secondary" id="preview-button">预览</button>
+        <button type="submit">保存文章</button>
+        <a class="button secondary" href="/admin/articles">取消</a>
+      </div>
+    </form>
+  </main>
+
+  <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+  <script src="/static/editor.js"></script>
+</body>
+</html>

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek 教学 Demo</title>
+    <style>
+        :root {
+            --bg: #f7f4ec;
+            --panel: #fffdf8;
+            --line: #d8cdb8;
+            --text: #2d2418;
+            --accent: #8f4e2f;
+            --accent-dark: #6f371d;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Noto Serif SC", "Source Han Serif SC", "PingFang SC", serif;
+            background:
+                radial-gradient(circle at top left, #f4e6cf 0, transparent 28%),
+                linear-gradient(180deg, #f9f5ed 0%, #f1eadc 100%);
+            color: var(--text);
+        }
+
+        .page {
+            max-width: 980px;
+            margin: 32px auto;
+            padding: 0 16px 32px;
+        }
+
+        .hero {
+            background: rgba(255, 253, 248, 0.9);
+            border: 1px solid rgba(143, 78, 47, 0.2);
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(81, 55, 23, 0.08);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 32px;
+        }
+
+        .sub-title {
+            margin: 0;
+            color: #675844;
+            line-height: 1.7;
+        }
+
+        .card {
+            margin-top: 20px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 12px 24px rgba(80, 58, 30, 0.06);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        label {
+            font-weight: 700;
+        }
+
+        textarea,
+        select {
+            width: 100%;
+            border: 1px solid #cbbba0;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 15px;
+            background: #fffefb;
+            color: var(--text);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 140px;
+            line-height: 1.7;
+        }
+
+        .prompt-box {
+            min-height: 220px;
+            background: #fffaf2;
+        }
+
+        .result-box {
+            min-height: 200px;
+            background: #fcfbf7;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            border: none;
+            border-radius: 999px;
+            padding: 12px 18px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: transform 0.18s ease, background 0.18s ease;
+        }
+
+        .primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .primary:hover {
+            background: var(--accent-dark);
+            transform: translateY(-1px);
+        }
+
+        .secondary {
+            background: #eadfca;
+            color: #4e3b28;
+        }
+
+        .hint {
+            margin: 8px 0 0;
+            color: #76654f;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .error {
+            margin-top: 12px;
+            border-radius: 12px;
+            background: #fff1ed;
+            color: #9f3417;
+            padding: 12px 14px;
+        }
+
+        .teaching-points {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-left: 4px solid var(--accent);
+            background: #faf4e8;
+            border-radius: 12px;
+            line-height: 1.8;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <section class="hero">
+            <h1>DeepSeek 教学 Demo</h1>
+            <p class="sub-title">
+                这个页面专门用于课堂演示“Prompt 如何影响生成结果”。学生可以输入原文、选择风格、直接修改 Prompt，再调用 DeepSeek API 观察输出变化。
+            </p>
+        </section>
+
+        <section class="card">
+            <form action="/generate" method="post" id="demo-form">
+                <div class="grid">
+                    <div class="field">
+                        <label for="mode">功能模式</label>
+                        <select id="mode" name="mode">
+                            {% for key, value in mode_options.items() %}
+                            <option value="{{ key }}" {% if mode == key %}selected{% endif %}>{{ value }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="style">风格选择</label>
+                        <select id="style" name="style">
+                            {% for key, value in style_options.items() %}
+                            <option value="{{ key }}" {% if style == key %}selected{% endif %}>{{ key }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="source_text">原始文本 / 主题</label>
+                    <textarea id="source_text" name="source_text" placeholder="请输入原文，或者输入一个主题进行风格生成。">{{ source_text }}</textarea>
+                    <p class="hint">教学点：同样的内容，在不同 Prompt 或不同风格下，模型输出会明显变化。</p>
+                </div>
+
+                <div class="field">
+                    <label for="prompt">Prompt 展示区（可直接编辑）</label>
+                    <textarea id="prompt" name="prompt" class="prompt-box">{{ prompt }}</textarea>
+                    <p class="hint">教学点：这里故意不隐藏 Prompt，方便学生观察和修改提示词。</p>
+                </div>
+
+                <div class="button-row">
+                    <button type="submit" class="primary">调用 AI 生成</button>
+                    <button type="button" class="secondary" id="reset-prompt">重置为默认 Prompt</button>
+                </div>
+
+                {% if error_message %}
+                <div class="error">{{ error_message }}</div>
+                {% endif %}
+
+                <div class="field" style="margin-top: 18px;">
+                    <label for="result">输出结果</label>
+                    <textarea id="result" class="result-box" readonly>{{ result }}</textarea>
+                    <p class="hint">教学点：建议课堂上先演示默认 Prompt，再让学生改一句限制条件，比较生成结果差异。</p>
+                </div>
+            </form>
+
+            <div class="teaching-points">
+                当前内置风格示例：
+                “正式”、“小学生”、“高考作文”、“鲁迅风”。
+                你也可以在 Python 代码里继续添加风格词条，观察 Prompt 模板如何自动变化。
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const styleDescriptions = {{ style_options | tojson }};
+        const modeLabels = {{ mode_options | tojson }};
+        const defaultText = {{ source_text | tojson }};
+
+        function buildPrompt(mode, sourceText, style) {
+            const text = sourceText.trim() || defaultText;
+            const styleDesc = styleDescriptions[style] || style;
+
+            if (mode === "style_generate") {
+                return [
+                    "你是一名语文写作助手。",
+                    `请围绕下面主题，生成一段“${style}”风格的中文内容。`,
+                    `风格要求：${styleDesc}`,
+                    "要求：",
+                    "1. 内容通顺自然",
+                    "2. 字数控制在120字左右",
+                    "3. 不要分点，直接输出正文",
+                    `主题：${text}`
+                ].join("\n");
+            }
+
+            return [
+                "你是一名语文写作助手。",
+                `请把下面这段文字改写成“${style}”风格。`,
+                `风格要求：${styleDesc}`,
+                "要求：",
+                "1. 保留原意",
+                "2. 语言更符合指定风格",
+                "3. 直接输出改写后的结果，不要解释",
+                `原文：${text}`
+            ].join("\n");
+        }
+
+        const modeEl = document.getElementById("mode");
+        const styleEl = document.getElementById("style");
+        const sourceTextEl = document.getElementById("source_text");
+        const promptEl = document.getElementById("prompt");
+        const resetButton = document.getElementById("reset-prompt");
+
+        resetButton.addEventListener("click", () => {
+            promptEl.value = buildPrompt(modeEl.value, sourceTextEl.value, styleEl.value);
+        });
+    </script>
+</body>
+</html>

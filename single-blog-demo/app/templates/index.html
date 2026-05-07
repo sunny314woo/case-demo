@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>单人博客 Demo</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">单人博客 Demo</a>
+    <nav>
+      <a href="/admin/articles">后台管理</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <h1>文章列表</h1>
+    <form class="search-form" method="get" action="/">
+      <input type="text" name="q" value="{{ q }}" placeholder="搜索标题、摘要或正文...">
+      <select name="category">
+        <option value="">全部分类</option>
+        {% for item in categories %}
+          <option value="{{ item.slug }}" {% if category == item.slug %}selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+      </select>
+      <input type="text" name="tag" value="{{ tag }}" placeholder="按标签 slug 过滤（可选）">
+      <button type="submit">搜索</button>
+    </form>
+
+    {% if articles %}
+      <div class="article-list">
+        {% for article in articles %}
+          <article class="article-item">
+            <h2><a href="/articles/{{ article.id }}">{{ article.title }}</a></h2>
+            <p class="meta">发布于 {{ article.published_at or article.created_at }}</p>
+            <p class="meta">阅读量 {{ article.view_count }}</p>
+            {% if article.category_name %}
+              <p class="meta">分类：{{ article.category_name }}</p>
+            {% endif %}
+            <p>{{ article.summary or "这篇文章暂时没有摘要。" }}</p>
+          </article>
+        {% endfor %}
+      </div>
+
+      <div class="pagination">
+        {% if page > 1 %}
+          <a href="/?page={{ page - 1 }}&q={{ q }}&category={{ category }}&tag={{ tag }}">上一页</a>
+        {% endif %}
+        <span class="hint">第 {{ page }} / {{ total_pages }} 页</span>
+        {% if page < total_pages %}
+          <a href="/?page={{ page + 1 }}&q={{ q }}&category={{ category }}&tag={{ tag }}">下一页</a>
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="empty">还没有文章。请先登录后台发布第一篇文章。</p>
+    {% endif %}
+  </main>
+</body>
+</html>

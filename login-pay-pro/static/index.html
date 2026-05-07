@@ -1,0 +1,222 @@
+<!--
+  魔法链接登录 - 单页前端（内联样式与脚本）
+
+  首次编辑：2026-05-07
+  最近修改：2026-05-07
+
+  页面逻辑：
+  - 加载时请求 GET /api/user/me，已登录则展示控制台视图，否则展示登录表单；
+  - 魔法链接在邮件中打开后会 Set-Cookie 并跳转首页，回到此页即视为已登录。
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>魔法链接登录</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .container { background: white; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); padding: 40px; max-width: 420px; width: 100%; }
+        .logo { text-align: center; margin-bottom: 30px; }
+        .logo h1 { font-size: 28px; color: #333; font-weight: 700; }
+        .logo p { color: #666; margin-top: 8px; font-size: 14px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
+        .form-group input { width: 100%; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px; transition: border-color 0.2s; outline: none; }
+        .form-group input:focus { border-color: #667eea; }
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102,126,234,0.4); }
+        .btn-secondary { background: #f5f5f5; color: #333; }
+        .btn-secondary:hover { background: #eee; }
+        .btn-gold { background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%); color: #333; }
+        .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,215,0,0.4); }
+        .message { padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .message-success { background: #d4edda; color: #155724; }
+        .message-error { background: #f8d7da; color: #721c24; }
+        .user-card { text-align: center; }
+        .avatar { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 32px; color: white; }
+        .avatar-free { background: linear-gradient(135deg, #666 0%, #999 100%); }
+        .avatar-pro { background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%); color: #333; }
+        .welcome-text { font-size: 20px; color: #333; margin-bottom: 8px; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 20px; }
+        .status-free { background: #eee; color: #666; }
+        .status-pro { background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%); color: #333; }
+        .pro-badge { font-size: 14px; color: #ffaa00; margin-bottom: 20px; }
+        .divider { height: 1px; background: #eee; margin: 20px 0; }
+        .small-text { font-size: 12px; color: #999; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 视图一：未登录 - 输入邮箱并请求发送魔法链接 -->
+        <div id="loginView">
+            <div class="logo">
+                <h1>🔮 魔法链接登录</h1>
+                <p>输入邮箱，快速登录/注册</p>
+            </div>
+            <div id="loginMessage"></div>
+            <div class="form-group">
+                <label for="email">邮箱地址</label>
+                <input type="email" id="email" placeholder="请输入您的邮箱">
+            </div>
+            <button class="btn btn-primary" onclick="sendMagicLink()">发送魔法链接</button>
+            <div class="small-text">登录即表示同意服务条款</div>
+        </div>
+
+        <!-- 视图二 / 三：已登录 - FREE 显示升级区，PRO 隐藏升级区 -->
+        <div id="loggedInView" style="display: none;">
+            <div class="user-card">
+                <div id="avatar" class="avatar avatar-free"></div>
+                <div class="welcome-text" id="welcomeText">欢迎</div>
+                <div class="status-badge" id="statusBadge">FREE用户</div>
+                <div id="proBadge" class="pro-badge" style="display: none;">🎉 感谢支持！已永久激活PRO</div>
+            </div>
+            
+            <div id="upgradeSection" style="display: none;">
+                <div class="divider"></div>
+                <div class="form-group">
+                    <label for="orderId">模拟支付 - 订单号</label>
+                    <input type="text" id="orderId" placeholder="输入任意订单号">
+                </div>
+                <button class="btn btn-gold" onclick="upgradeToPro()">升级为PRO</button>
+            </div>
+            
+            <div id="upgradeMessage"></div>
+            
+            <div class="divider"></div>
+            <button class="btn btn-secondary" onclick="logout()">登出</button>
+        </div>
+    </div>
+
+    <script>
+        /** 调用后端发送魔法链接；依赖 Cookie 的接口使用同源 fetch 自动携带。 */
+        async function sendMagicLink() {
+            const email = document.getElementById('email').value;
+            const messageDiv = document.getElementById('loginMessage');
+            
+            if (!email) {
+                messageDiv.innerHTML = '<div class="message message-error">请输入邮箱</div>';
+                return;
+            }
+            
+            messageDiv.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/auth/send-magic-link', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    messageDiv.innerHTML = '<div class="message message-success">验证链接已发送到您的邮箱，请查收</div>';
+                    document.getElementById('email').value = '';
+                } else {
+                    messageDiv.innerHTML = `<div class="message message-error">${data.message}</div>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="message message-error">网络错误，请重试</div>';
+            }
+        }
+
+        /** 初始化：判断是否已登录并切换视图 */
+        async function checkLogin() {
+            try {
+                const response = await fetch('/api/user/me');
+                const data = await response.json();
+                
+                if (data.success) {
+                    showLoggedInView(data.user);
+                } else {
+                    showLoginView();
+                }
+            } catch (error) {
+                showLoginView();
+            }
+        }
+
+        /** 显示未登录界面 */
+        function showLoginView() {
+            document.getElementById('loginView').style.display = 'block';
+            document.getElementById('loggedInView').style.display = 'none';
+        }
+
+        /** 根据 user.is_pro 切换 FREE / PRO 样式与升级区域显隐 */
+        function showLoggedInView(user) {
+            document.getElementById('loginView').style.display = 'none';
+            document.getElementById('loggedInView').style.display = 'block';
+            
+            document.getElementById('welcomeText').textContent = `欢迎，${user.email}`;
+            
+            const avatar = document.getElementById('avatar');
+            const statusBadge = document.getElementById('statusBadge');
+            const proBadge = document.getElementById('proBadge');
+            const upgradeSection = document.getElementById('upgradeSection');
+            
+            if (user.is_pro) {
+                avatar.className = 'avatar avatar-pro';
+                avatar.textContent = '✨';
+                statusBadge.className = 'status-badge status-pro';
+                statusBadge.textContent = 'PRO用户';
+                proBadge.style.display = 'block';
+                upgradeSection.style.display = 'none';
+            } else {
+                avatar.className = 'avatar avatar-free';
+                avatar.textContent = user.email.charAt(0).toUpperCase();
+                statusBadge.className = 'status-badge status-free';
+                statusBadge.textContent = 'FREE用户';
+                proBadge.style.display = 'none';
+                upgradeSection.style.display = 'block';
+            }
+        }
+
+        /** 模拟支付升级 POST /api/user/upgrade-to-pro */
+        async function upgradeToPro() {
+            const orderId = document.getElementById('orderId').value;
+            const messageDiv = document.getElementById('upgradeMessage');
+            
+            if (!orderId) {
+                messageDiv.innerHTML = '<div class="message message-error">请输入订单号</div>';
+                return;
+            }
+            
+            messageDiv.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/user/upgrade-to-pro', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: orderId })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    messageDiv.innerHTML = '<div class="message message-success">升级成功！</div>';
+                    document.getElementById('orderId').value = '';
+                    checkLogin();
+                } else {
+                    messageDiv.innerHTML = `<div class="message message-error">${data.message}</div>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="message message-error">网络错误，请重试</div>';
+            }
+        }
+
+        /** 登出并回到登录视图 */
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                showLoginView();
+            } catch (error) {
+                showLoginView();
+            }
+        }
+
+        // 单页应用入口：首屏拉取登录态
+        document.addEventListener('DOMContentLoaded', checkLogin);
+    </script>
+</body>
+</html>

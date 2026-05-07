@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if article %}{{ seo_title }}{% else %}文章不存在{% endif %}</title>
+  {% if article %}
+    <meta name="description" content="{{ seo_description }}">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="{{ seo_title }}">
+    <meta property="og:description" content="{{ seo_description }}">
+    <meta property="og:url" content="{{ request.url }}">
+    {% if seo_image %}
+      <meta property="og:image" content="{{ seo_image }}">
+    {% endif %}
+  {% endif %}
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">单人博客 Demo</a>
+    <nav>
+      <a href="/">首页</a>
+      <a href="/admin/articles">后台管理</a>
+    </nav>
+  </header>
+
+  <main class="container article-detail">
+    {% if article %}
+      <h1>{{ article.title }}</h1>
+      <p class="meta">发布于 {{ article.published_at or article.created_at }}，更新于 {{ article.updated_at }}</p>
+      <p class="meta">阅读量：{{ article.view_count }}</p>
+      {% if article.category_name %}
+        <p class="meta">分类：{{ article.category_name }}</p>
+      {% endif %}
+      {% if tags %}
+        <p class="meta">
+          标签：
+          {% for tag in tags %}
+            {% if not loop.first %} / {% endif %}
+            <a href="/?tag={{ tag.slug }}">{{ tag.name }}</a>
+          {% endfor %}
+        </p>
+      {% endif %}
+
+      <!--
+        正文是 Quill 编辑器生成的 HTML。
+        这里使用 safe，告诉 Jinja2 不要把 HTML 标签转义成普通文本。
+        课堂提醒：真实产品中要做 HTML 清洗，避免 XSS。
+      -->
+      <div class="content">{{ article.content | safe }}</div>
+
+      {% if related_articles %}
+        <section class="related-block">
+          <h2>相关文章</h2>
+          <ul class="related-list">
+            {% for item in related_articles %}
+              <li>
+                <a href="/articles/{{ item.id }}">{{ item.title }}</a>
+                <span class="hint">（{{ item.published_at or item.created_at }}）</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+    {% else %}
+      <h1>文章不存在</h1>
+      <p>你访问的文章可能已经被删除。</p>
+    {% endif %}
+  </main>
+</body>
+</html>
